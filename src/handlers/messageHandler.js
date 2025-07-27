@@ -3,6 +3,7 @@ const path = require('path');
 const axios = require('axios');
 const sharp = require('sharp');
 const { recognize } = require('tesseract.js');
+const { tmpdir } = require('os');  // Untuk membuat file sementara
 
 const { extractCPI, detectCN } = require('../services/detectionService');
 const { formatCPIStatus, formatCNStatus } = require('../utils/formatter');
@@ -40,7 +41,12 @@ module.exports = function (bot) {
 
     if (state === ASK_NAME && msg.text && !msg.text.startsWith('/')) {
       const rawName = msg.text.trim();
-      const cleanName = rawName.toUpperCase().replace(/\s+/g, ''); // Normalisasi
+      const upperName = rawName.toUpperCase();
+      
+      const cleanName = (upperName.startsWith('PAP') || upperName.startsWith('MLA') || upperName.startsWith('MLU'))
+        ? upperName.replace(/\s+/g, '') 
+        : upperName; 
+
       userData[chatId].name = cleanName;
       userData[chatId].state = ASK_PHOTO;
       return bot.sendMessage(chatId, 'Sekarang kirim foto carriernya.');
@@ -73,17 +79,26 @@ module.exports = function (bot) {
         const finalBuffer = await applyWatermark(imageBuffer, name, meta);
 
         const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const tanggal = `${yyyy}${mm}${dd}`;
-        const fileName = `${name}_${tanggal}.jpg`;
+        const dd = String(now.getDate()).padStart(2, '0');  // Hari (dengan leading zero)
+        const mm = String(now.getMonth() + 1).padStart(2, '0');  // Bulan (dengan leading zero)
+        const yyyy = now.getFullYear();  // Tahun
+        const tanggal = `${dd}-${mm}-${yyyy}`;  // Format tanggal menjadi dd-mm-yyyy
+        const fileName = `${name}_${tanggal}.jpg`;  // Menyusun nama file: nama_site_dd-mm-yyyy.jpg
+
+        console.log("Nama file yang akan dikirim:", fileName);  // Debugging: Pastikan nama file benar
+
+        // Simpan file sementara
+        const tempFilePath = path.join(tmpdir(), fileName);
+        await fs.writeFile(tempFilePath, finalBuffer);
 
         // Kirim hasil langsung sebagai dokumen agar bisa di-save dengan nama yang sesuai
-        await bot.sendDocument(chatId, finalBuffer, {
+        await bot.sendDocument(chatId, tempFilePath, {
           filename: fileName,
           caption: `✅ Selesai! Silakan dikirimkan.\n\n${name}\n• C/N: ${cnResult}\n• CPI: ${cpiResult}`,
         });
+
+        // Hapus file sementara setelah dikirim
+        await fs.remove(tempFilePath);
 
         // Logging
         await fs.ensureDir('logs');
