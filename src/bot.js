@@ -19,10 +19,10 @@ let lastChatId = null;
 // Cron kirim log harian jam 00:00 WIB
 cron.schedule('0 0 * * *', async () => {
   const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
   const dd = String(now.getDate()).padStart(2, '0');
-  const logPath = path.join(__dirname, '../logs', `log_${yyyy}${mm}${dd}.txt`);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const yyyy = now.getFullYear();
+  const logPath = path.join(__dirname, '../logs', `log_${dd}-${mm}-${yyyy}.txt`);
 
   if (lastChatId && fs.existsSync(logPath)) {
     await bot.sendDocument(lastChatId, logPath, {
