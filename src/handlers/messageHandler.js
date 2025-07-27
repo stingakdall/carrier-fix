@@ -82,7 +82,7 @@ module.exports = function (bot) {
         const dd = String(now.getDate()).padStart(2, '0');  // Hari (dengan leading zero)
         const mm = String(now.getMonth() + 1).padStart(2, '0');  // Bulan (dengan leading zero)
         const yyyy = now.getFullYear();  // Tahun
-        const tanggal = `${dd}-${mm}-${yyyy}`;  // Format tanggal menjadi dd-mm-yyyy
+        const tanggal = `${dd}/${mm}/${yyyy}`;  // Format tanggal menjadi dd-mm-yyyy
         const fileName = `${name}_${tanggal}.jpg`;  // Menyusun nama file: nama_site_dd-mm-yyyy.jpg
 
         console.log("Nama file yang akan dikirim:", fileName);  // Debugging: Pastikan nama file benar
