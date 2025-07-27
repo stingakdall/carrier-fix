@@ -39,7 +39,9 @@ module.exports = function (bot) {
     const state = userData[chatId]?.state;
 
     if (state === ASK_NAME && msg.text && !msg.text.startsWith('/')) {
-      userData[chatId].name = msg.text.trim();
+      const rawName = msg.text.trim();
+      const cleanName = rawName.toUpperCase().replace(/\s+/g, ''); 
+      userData[chatId].name = cleanName;
       userData[chatId].state = ASK_PHOTO;
       return bot.sendMessage(chatId, 'Sekarang kirim foto carriernya.');
     }
@@ -70,19 +72,17 @@ module.exports = function (bot) {
 
         const finalBuffer = await applyWatermark(imageBuffer, name, meta);
 
-        await fs.ensureDir('Result');
-        const safeName = name.replace(/\s+/g, '_');
+        const caption = `✅ Selesai! Silakan dikirimkan.\n\n${name}\n• C/N: ${cnResult}\n• CPI: ${cpiResult}`;
+        await bot.sendPhoto(chatId, finalBuffer, {
+          caption,
+          filename: `${name}.jpg`,
+        });
+
         const now = new Date();
         const yyyy = now.getFullYear();
         const mm = String(now.getMonth() + 1).padStart(2, '0');
         const dd = String(now.getDate()).padStart(2, '0');
         const tanggal = `${yyyy}${mm}${dd}`;
-        const fileName = `${safeName}_${tanggal}.jpg`;
-        const filePath = path.join('Result', fileName);
-        await fs.writeFile(filePath, finalBuffer);
-
-        const caption = `✅ Selesai! Silakan dikirimkan.\n\n${name}\n• C/N: ${cnResult}\n• CPI: ${cpiResult}`;
-        await bot.sendPhoto(chatId, filePath, { caption });
 
         await fs.ensureDir('logs');
         const logPath = path.join('logs', `log_${tanggal}.txt`);
@@ -100,4 +100,3 @@ module.exports = function (bot) {
     }
   });
 };
-
