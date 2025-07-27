@@ -22,11 +22,20 @@ const showStartButton = (chatId, bot) => {
   });
 };
 
+// Fungsi untuk mendapatkan tanggal log yang tersedia
+const getAvailableLogDates = () => {
+  const logsDir = 'logs';
+  return fs.readdirSync(logsDir)
+    .filter(file => file.startsWith('log_') && file.endsWith('.txt'))
+    .map(file => file.replace('log_', '').replace('.txt', ''));
+};
+
 module.exports = function (bot) {
   bot.onText(/\/start/, (msg) => {
     showStartButton(msg.chat.id, bot);
   });
 
+  // Menangani callback untuk tombol "Mulai"
   bot.on('callback_query', (query) => {
     const chatId = query.message.chat.id;
     if (query.data === 'mulai_watermark') {
@@ -35,6 +44,56 @@ module.exports = function (bot) {
     }
   });
 
+  // Menangani perintah /log untuk menampilkan tanggal log yang tersedia
+  bot.onText(/\/log/, (msg) => {
+    const chatId = msg.chat.id;
+    const availableDates = getAvailableLogDates();
+
+    if (availableDates.length > 0) {
+      const keyboard = availableDates.map(date => [{ text: date, callback_data: `show_log_${date}` }]);
+      bot.sendMessage(chatId, 'Pilih tanggal untuk melihat log:', {
+        reply_markup: { inline_keyboard: keyboard }
+      });
+    } else {
+      bot.sendMessage(chatId, '❌ Tidak ada log yang tersedia.');
+    }
+  });
+
+  // Menangani pemilihan tanggal log dan menampilkan konten + file
+  bot.on('callback_query', async (query) => {
+    const chatId = query.message.chat.id;
+    const callbackData = query.data;
+
+    if (callbackData.startsWith('show_log_')) {
+      const logDate = callbackData.replace('show_log_', '');
+      const logFilePath = path.join('logs', `log_${logDate}.txt`);
+
+      try {
+        if (fs.existsSync(logFilePath)) {
+          // Membaca konten log
+          const logContent = await fs.readFile(logFilePath, 'utf8');
+
+          // Mengirimkan konten log sebagai pesan teks
+          bot.sendMessage(chatId, `Log untuk tanggal ${logDate}:\n\n${logContent}`);
+
+          // Mengirimkan file log sebagai dokumen
+          await bot.sendDocument(chatId, logFilePath, {
+            caption: `File log untuk tanggal ${logDate}`,
+          });
+        } else {
+          bot.sendMessage(chatId, `❌ Log untuk tanggal ${logDate} tidak ditemukan.`);
+        }
+      } catch (err) {
+        console.error('❌ Gagal membaca log:', err);
+        bot.sendMessage(chatId, '❌ Gagal mengambil log.');
+      }
+
+      // Selalu tampilkan tombol "Mulai" setelah proses selesai
+      showStartButton(chatId, bot);
+    }
+  });
+
+  // Menangani pesan (foto atau dokumen) untuk watermarking
   bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const state = userData[chatId]?.state;
@@ -82,8 +141,8 @@ module.exports = function (bot) {
         const dd = String(now.getDate()).padStart(2, '0');  // Hari (dengan leading zero)
         const mm = String(now.getMonth() + 1).padStart(2, '0');  // Bulan (dengan leading zero)
         const yyyy = now.getFullYear();  // Tahun
-        const tanggal = `${dd}/${mm}/${yyyy}`;  // Format tanggal menjadi dd/mm/yyyy
-        const fileName = `${name}_${tanggal}.jpg`;  // Menyusun nama file: nama_site_dd/mm/yyyy.jpg
+        const tanggal = `${dd}-${mm}-${yyyy}`;  // Format tanggal menjadi dd-mm-yyyy
+        const fileName = `${name}_${tanggal}.jpg`;  // Menyusun nama file: nama_site_dd-mm-yyyy.jpg
 
         console.log("Nama file yang akan dikirim:", fileName);  // Debugging: Pastikan nama file benar
 
@@ -102,7 +161,7 @@ module.exports = function (bot) {
 
         // Logging
         await fs.ensureDir('logs');
-        const logPath = path.join('logs', `log_${tanggal}.txt`);
+        const logPath = path.join('logs', `log_${tanggal}.txt`);  // Format log file menjadi log_dd-mm-yyyy.txt
         const logLine = `${new Date().toLocaleString('id-ID')} - ${name} | C/N: ${cnResult} | CPI: ${cpiResult}\n`;
         await fs.appendFile(logPath, logLine);
 
