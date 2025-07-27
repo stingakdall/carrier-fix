@@ -14,7 +14,7 @@ async function applyWatermark(imageBuffer, name, meta) {
   const ctx = canvas.getContext('2d');
 
   // Gambar utama
-  const baseImg = await loadImage(imageBuffer); // ✅ dari buffer, bukan path
+  const baseImg = await loadImage(imageBuffer); 
   ctx.drawImage(baseImg, 0, 0);
 
   // Tambahkan teks watermark
@@ -24,7 +24,7 @@ async function applyWatermark(imageBuffer, name, meta) {
   ctx.fillText(name, meta.width * 0.25, meta.height * 0.5);
   ctx.fillText(dateNow, meta.width * 0.25, meta.height * 0.5 + 42);
 
-  // Tambahkan logo (buffer aman di Linux)
+  // Tambahkan logo
   const logoNmcPath = path.join(__dirname, '../assets/nmc.png');
   const logoPsnPath = path.join(__dirname, '../assets/psn.png');
 
