@@ -40,7 +40,7 @@ module.exports = function (bot) {
 
     if (state === ASK_NAME && msg.text && !msg.text.startsWith('/')) {
       const rawName = msg.text.trim();
-      const cleanName = rawName.toUpperCase().replace(/\s+/g, ''); 
+      const cleanName = rawName.toUpperCase().replace(/\s+/g, ''); // Normalisasi
       userData[chatId].name = cleanName;
       userData[chatId].state = ASK_PHOTO;
       return bot.sendMessage(chatId, 'Sekarang kirim foto carriernya.');
@@ -72,18 +72,20 @@ module.exports = function (bot) {
 
         const finalBuffer = await applyWatermark(imageBuffer, name, meta);
 
-        const caption = `✅ Selesai! Silakan dikirimkan.\n\n${name}\n• C/N: ${cnResult}\n• CPI: ${cpiResult}`;
-        await bot.sendPhoto(chatId, finalBuffer, {
-          caption,
-          filename: `${name}.jpg`,
-        });
-
         const now = new Date();
         const yyyy = now.getFullYear();
         const mm = String(now.getMonth() + 1).padStart(2, '0');
         const dd = String(now.getDate()).padStart(2, '0');
         const tanggal = `${yyyy}${mm}${dd}`;
+        const fileName = `${name}_${tanggal}.jpg`;
 
+        // Kirim hasil langsung sebagai dokumen agar bisa di-save dengan nama yang sesuai
+        await bot.sendDocument(chatId, finalBuffer, {
+          filename: fileName,
+          caption: `✅ Selesai! Silakan dikirimkan.\n\n${name}\n• C/N: ${cnResult}\n• CPI: ${cpiResult}`,
+        });
+
+        // Logging
         await fs.ensureDir('logs');
         const logPath = path.join('logs', `log_${tanggal}.txt`);
         const logLine = `${new Date().toLocaleString('id-ID')} - ${name} | C/N: ${cnResult} | CPI: ${cpiResult}\n`;
